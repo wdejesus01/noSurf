@@ -1,0 +1,28 @@
+#!/bin/bash
+
+add_host () {
+	# Append Arguement to /etc/hosts
+	# Writing to /etc/hosts requires root permissions
+	# Redirection is executed by shell not by command thus
+	# tee command must be used
+	# stdout of tee is redirected to /dev/null to supress output
+	if [[ $1 && -n $1 ]]; then 
+	    # hostp needs to be updated to match exact address
+	    if ~/bin/noSurf/hostp "$1"; then 
+		echo "0.0.0.0 $1" | sudo tee -a /etc/hosts > /dev/null;
+	    fi
+	else
+	    echo "No canadite hostname given";
+	fi
+}
+
+remove_host (){
+    if [[ $1 && -n $1 ]]; then 
+	sudo sed "/${1}/d" /etc/hosts
+    fi
+}	
+
+#Unblock hostname via commenting out
+#unblock_host (){
+    
+

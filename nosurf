@@ -1,0 +1,66 @@
+#!/bin/bash
+#IFS set to newline for seperating device names when grepped 39
+IFS=$'\n'
+
+#Function to turn off networks
+Disconnect_Networks() {
+	DeviceState=$(networksetup -listallnetworkservices | tail -n +2)
+	DevicesOn=$(grep -E '^[^\*]' <<<"$DeviceState")
+	if [[ $DevicesOn ]]; then
+		echo "$1"
+		for networkservice in $DevicesOn; do
+			networksetup -setnetworkserviceenabled $networkservice off
+		done
+		echo "All network devices turned off"
+	fi
+}
+
+#Check if there are any currently on networks
+#If any found turn them off
+Disconnect_Networks "Hey you're connected to the internet!"
+
+read -p "What are you using the internet for? " purpose
+
+#Ask how long the network will be on
+#Cannot be longer then a hour and cannot be negative
+#Make sure user is sure of time
+#Do not stop asking until user has entered a appropiate time AND is sure
+
+certainty='No'
+time=0
+while [[ $certainty =~ [nN]o ]]; do
+	echo -e "For how long would you like to connect to the net (in minuets)?\nPlease no longer then a hour"
+	read time
+	while [[ $time -gt 60 || $time -lt 0 ]]; do
+		if [[ $time -gt 60 ]]; then
+			echo "You are asking for too much time, please enter a reasonable amount of time"
+		else
+			echo "You have input negative timing, I can't give you back time"
+		fi
+		read time
+	done
+	echo "Are you sure? You have choosen $time minuets. (yes/no)"
+	read certainty
+done
+
+#Turn on network devices for allocated time
+#After allocated time, turn back off and exit
+Devices=$(networksetup -listallnetworkservices | tail -n +2 | grep -Eo '[^\*].*')
+for networkservice in $Devices; do
+	networksetup -setnetworkserviceenabled $networkservice on
+done
+
+#Reconnect mullvad
+mullvad reconnect
+
+#Starting counting down time left
+#Once time is over disconnect networks
+echo -e "Connection online\nYou have $time minuets before the internet goes off"
+until [[ $time -eq 0 ]]; do
+	clear
+	echo "You have ${time} minuets of internet time remaining"
+	sleep 60
+	((time--))
+done
+Disconnect_Networks "Going offline ..."
+echo -e "$(date)\nUsage: $purpose\nTime allocated: $time" >>~/Desktop/internet.log
